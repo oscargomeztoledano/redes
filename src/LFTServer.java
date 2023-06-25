@@ -41,15 +41,15 @@ public class LFTServer {
     private static int clientesMax;
     private static String serverDir;
     private static boolean SSL=false;
-    private static int nCLientes;
+    private static int nCLientes=0;
     private SSLServerSocket socketSSL;
     
 
 
     public static void main(String[] args) throws UnrecoverableKeyException,CertificateException,NoSuchAlgorithmException,IOException,KeyStoreException{
         
-        File file = new File("logErrores.txt");    //creamos los archivos de registro
-        File file2= new File("logAcciones.txt");
+        File file = new File("logErrores.log");    //creamos los archivos de registro
+        File file2= new File("logAcciones.log");
         if (!file.exists()&&!file2.exists()) {
             try {
                 file.createNewFile();
@@ -98,12 +98,60 @@ public class LFTServer {
             e.getMessage();
         }
 
-        LFTServer server= new LFTServer();
-        //dependiendo de el modo seleccionado se inicia el server ssl o el normal 
-
-
-        //CONTRASEÑA password
+        LFTServer server= new LFTServer();  //instanciamos esta misma clase
+        if(SSL)server.modoSSL(puerto);      //llamamos dependiendo del modo que se haya seleccionado
+        else server.modoNormal(puerto);
         
 
+    }
+    public void modoSSL(int puerto) throws IOException, KeyStoreException, FileNotFoundException,NoSuchAlgorithmException,CertificateException,UnrecoverableKeyException{
+        //modo ssl del servidor
+        String trustedStore="\\home\\oscar\\java\\jre1.8.0_371\\lib\\security\\serverTrustedStore.jks";
+        String serverKey="\\home\\oscar\\java\\jre1.8.0_371\\lib\\security\\serverKey.jks";
+
+        //acedemos al almacen de claves serverkey
+        KeyStore store= KeyStore.getInstance("JKS");
+        store.load(new FileInputStream(serverKey), "servpass".toCharArray());
+        KeyManagerFactory Mfact=KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        Mfact.init(store, "servpass".toCharArray());
+        KeyManager[] keyManagers= Mfact.getKeyManagers();
+
+        //acedemos al almacen de claves trustedstore
+        KeyStore trusted= KeyStore.getInstance("JKS");
+        trusted.load(new FileInputStream(trustedStore), "servpass".toCharArray());
+        TrustManagerFactory tmFact=TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tmFact.init(trusted);
+        TrustManager[] trustManagers=tmFact.getTrustManagers();
+
+        //intentamos conseguir sockets
+        try{
+            SSLContext socket= SSLContext.getInstance("SSL");
+            socket.init(keyManagers,trustManagers,null);
+            SSLServerSocketFactory socketFactory= socket.getServerSocketFactory();
+            socketSSL = (SSLServerSocket) socketFactory.createServerSocket(puerto);
+            socketSSL.setNeedClientAuth(true);
+
+            System.out.println("Arrancado en modo SSL");
+
+            //mientras que no se supere el numero  maximo de clientes 
+            while(nCLientes<=clientesMax){
+                SSLSocket socketC =(SSLSocket) socketSSL.accept();
+                //AQUI EL METODO SERVIR PARA GESTIONAR TODAS LAS ACCIONES DEL CLIENTE
+                nCLientes++;
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+    public void modoNormal(int puerto) throws IOException{
+        ServerSocket s = new ServerSocket(puerto);
+        System.out.println("servidor arrancado en modo normal.");
+
+        //mientras que no se supere el numero max de clientes
+        while(nCLientes<=clientesMax){
+            Socket cliente=s.accept();
+            //AQUI VA LA LLAMADA AL METODO SIRVE
+            nCLientes++;
+        }
     }
 }
