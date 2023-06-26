@@ -73,6 +73,7 @@ public class LFTServer {
         
 
         try{
+            
             if(args.length==4){     //seleccion de modo ssl
                 if(args[0].equals("SSL")){  //parametros del modo ssl
                     System.out.println("Ha seleccionado el modo SSL");
@@ -106,8 +107,8 @@ public class LFTServer {
     }
     public void modoSSL(int puerto) throws IOException, KeyStoreException, FileNotFoundException,NoSuchAlgorithmException,CertificateException,UnrecoverableKeyException{
         //modo ssl del servidor
-        String trustedStore="\\home\\oscar\\java\\jre1.8.0_371\\lib\\security\\serverTrustedStore.jks";
-        String serverKey="\\home\\oscar\\java\\jre1.8.0_371\\lib\\security\\serverKey.jks";
+        String trustedStore="/home/oscar/java/jre1.8.0_371/lib/security/servertrustedstore.jks";
+        String serverKey="/home/oscar/java/jre1.8.0_371/lib/security/serverkey.jks";
 
         //acedemos al almacen de claves serverkey
         KeyStore store= KeyStore.getInstance("JKS");
@@ -122,6 +123,8 @@ public class LFTServer {
         TrustManagerFactory tmFact=TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         tmFact.init(trusted);
         TrustManager[] trustManagers=tmFact.getTrustManagers();
+        
+        
 
         //intentamos conseguir sockets
         try{
@@ -150,8 +153,133 @@ public class LFTServer {
         //mientras que no se supere el numero max de clientes
         while(nCLientes<=clientesMax){
             Socket cliente=s.accept();
-            //AQUI VA LA LLAMADA AL METODO SIRVE
+            sirve(cliente);
             nCLientes++;
         }
     }
-}
+    public void sirve(Socket cliente) {
+        new Thread() {
+            public void run() {
+                try {
+
+                    if (SSL) {
+                        SSLSession s = ((SSLSocket) cliente).getSession();
+                        System.out.println("Conectado cliente: " + s.getPeerHost() + ":" + s.getPeerPrincipal().toString());
+
+                    } else {
+                        System.out.println("Cliente (con puerto en" + cliente.getPort() + ") conectado desde "+ cliente.getInetAddress() + " al puerto " + cliente.getLocalPort());
+                    }
+
+                    String recibido;
+
+                    // INPUT Y OUTPUT STREAMS
+                    InputStream in = cliente.getInputStream();
+                    OutputStream out = cliente.getOutputStream();
+
+                    Scanner sc = new Scanner(in);
+                    PrintWriter output = new PrintWriter(out);
+
+                    recibido = sc.nextLine();
+
+                    // LEER TODOS LOS ARCHIVOS DE UN DIRECTORIO
+                    if (recibido.equals("LIST")) { // poner el else con que si no existe se hace el paso de error a la
+                        acciones.info("Recibido comando LIST");							// carpeta log
+                        String enviar = " ";
+                        File fichero = new File(serverDir);
+                        if (fichero.exists()) {// se comprueba si existe el el directorio
+                        acciones.info("Ruta correcta");
+                            File[] arrayFicheros = fichero.listFiles();
+                            for (int i = 0; i < arrayFicheros.length; i++) {
+                                enviar += "Archivo: " + arrayFicheros[i].getName() + " con tamano " + "("+ arrayFicheros[i].length() + ")" + "\n";
+                            }
+                        } else {
+                        acciones.severe("No existe la carpeta");
+                            out.write(("No existe la carpeta\n").getBytes());
+                            out.flush();
+                        }
+                        output.println(enviar);
+                    acciones.info("Listado enviado");
+                        output.flush();
+
+                        nCLientes--;
+                        cliente.close();
+                    }
+
+                    // EL CLIENTE LE MANDA DOS COSAS AL SERVIDOR: Comando-Archivo
+                    String lineas[] = recibido.split("\n");
+
+                    if (lineas.length > 0) {
+                        String tokens[] = lineas[0].split(" ");
+                        if (tokens.length >= 2) {
+
+                            // EL SERVIDOR DEVULEVE ARCHIVO PEDIDO AL CLIENTE
+                            if (tokens[0].equals("GET")) {
+                            acciones.info("Recibido comando GET");
+                                try {
+                                    String ruta = serverDir + "//" + tokens[1];
+                                    File archivo = new File(ruta);
+
+                                    if (archivo.exists() && !archivo.isDirectory()) {
+                                    acciones.info("Ruta correcta");
+                                        FileInputStream fis = new FileInputStream(archivo);
+                                        BufferedInputStream bis = new BufferedInputStream(fis);
+                                        byte[] buffer = new byte[(int) archivo.length()];
+                                        bis.read(buffer, 0, buffer.length);
+
+                                        OutputStream os = cliente.getOutputStream();
+                                        os.write(buffer, 0, buffer.length);
+                                        acciones.info("Archivo enviado");
+                                        os.flush();
+
+                                        bis.close();
+                                        fis.close();
+
+                                        cliente.close();
+                                        sc.close();
+                                        nCLientes--;
+                                    } else {
+                                        // Archivo no encontrado
+                                        errores.severe("No se ha encontrado el archivo");
+                                        String respuesta = "NO se ha encontrado el archivo";
+                                        output.println(respuesta);
+                                        output.flush();
+                                        cliente.close();
+                                        sc.close();
+                                        nCLientes--;
+                                    }
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            // INTRODUCIR UN FICHERO MANDADO POR EL CLIENTE
+                            else if (tokens[0].equals("PUT")) {
+                            acciones.info("Recibido comando PUT");
+                                try {
+                                    String ruta = serverDir + "//" + tokens[1];
+                                    FileOutputStream fos = new FileOutputStream(ruta);
+
+                                    byte[] buffer = new byte[1024];
+                                    int bytesRead;
+                                    while ((bytesRead = cliente.getInputStream().read(buffer)) != -1) {
+                                        fos.write(buffer, 0, bytesRead);
+                                    }
+                                    fos.close();
+                                    acciones.info("Archivo almacenado correctamente");
+                                    cliente.close();
+                                    nCLientes--;
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+
+
+                        }
+                    }
+                } catch (Exception e) {
+
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+    }
+    }
