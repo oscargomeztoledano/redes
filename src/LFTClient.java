@@ -61,7 +61,7 @@ public class LFTClient{
         //captura de argumentos
 
         try{
-            
+
             if(args.length==4){
                 if(args[0].equals("SSL")){
                     System.out.println("Modo ssl seleccionado.");
@@ -85,18 +85,17 @@ public class LFTClient{
             e.getMessage();
         }
         if (SSL) {
-			LFTClient clienteSSL = new LFTClient(host, puerto);
-            System.out.println("segundo he llegado aqui.");
-			clienteSSL.start();
-		} else {
-			LFTClient cliente = new LFTClient();
-			cliente.start();
-		}
+            LFTClient clienteSSL = new LFTClient(host, puerto);
+            clienteSSL.start();
+        } else {
+            LFTClient cliente = new LFTClient();
+            cliente.start();
+        }
     }
     LFTClient(String host,int puerto) throws Exception{
         //modo ssl del servidor
-        String clientStore="/home/oscar/java/jre1.8.0_371/lib/security/clientKey.jks";
-        String cacerts="/home/oscar/java/jre1.8.0_371/lib/security/cacerts";
+    	String clientStore="C:\\Program Files\\Java\\jre1.8.0_321\\bin\\clientKey.jks";
+    	String cacerts="C:\\Program Files\\Java\\jre1.8.0_321\\bin\\cacerts";
 
         //acedemos al almacen de claves serverkey
         KeyStore store= KeyStore.getInstance("JKS");
@@ -149,14 +148,14 @@ public class LFTClient{
                     PrintWriter salida=new PrintWriter(cliente.getOutputStream());
 
                     System.out.println("Acciones disponibles: \n"
-                                        + "GET + nombre del fichero\n"
-                                        + "LIST\n"
-                                        + "PUT + nombre del fichero\n");
+                            + "GET + nombre del fichero\n"
+                            + "LIST\n"
+                            + "PUT + nombre del fichero\n");
                     Scanner entrada=new Scanner(System.in);
                     String eleccion= entrada.nextLine();
                     String tokens[]= eleccion.split(" ");
 
-                    //ElecciÃ³n LIST
+                    //Elección LIST
                     if (tokens[0].equals("LIST")){
                         acciones.info("Solicitud LIST.\n");
                         salida.println(eleccion);
@@ -168,18 +167,18 @@ public class LFTClient{
                             String line=scaner.nextLine();
                             String token[]=line.split(" ");
                             for (int j=0;j<token.length;j++)
-                            System.out.println(token[j]+ " ");
+                                System.out.println(token[j]+ " ");
                             System.out.println("\n");
                         }
                         cliente.close();
                     }
 
-                    //ElecciÃ³n PUT
+                    //Elección PUT
                     else if(tokens[0].equals("PUT")){
                         acciones.info("Solicitud PUT.\n");
                         salida.print(eleccion);
                         salida.flush();
-                        String ruta= clienteDir+"//"+ tokens[1];
+                        String ruta= clienteDir+"\\"+ tokens[1];
                         File file=new File(ruta);
                         acciones.info("Enviamos el archivo: "+ruta+", al servidor");
                         if(file.isFile()&&file.exists()){
@@ -187,7 +186,7 @@ public class LFTClient{
                             byte[] buff=new byte[1024];
                             int bytesleidos;
                             while((bytesleidos=fichero.read(buff))!=-1)
-                            cliente.getOutputStream().write(buff,0,bytesleidos);
+                                cliente.getOutputStream().write(buff,0,bytesleidos);
                             fichero.close();
                             acciones.info("Archivo enviado");
                             System.out.println("Archivo enviado");
@@ -195,13 +194,13 @@ public class LFTClient{
                         cliente.close();
                     }
 
-                    //ElecciÃ³n GET
+                    //Elección GET
                     else if(tokens[0].equals("GET")){
                         acciones.info("Solicitud GET.\n");
                         salida.println(eleccion);
                         salida.flush();
 
-                        String fichero = clienteDir+"//"+tokens[1];
+                        String fichero = clienteDir+"\\"+tokens[1];
                         InputStream i=cliente.getInputStream();
                         FileOutputStream o=new FileOutputStream(fichero);
                         acciones.info("Fichero: "+fichero+" pedido al servidor");
@@ -210,14 +209,14 @@ public class LFTClient{
                         byte[] bff=new byte[1024];
                         int bytesleidos;
                         while((bytesleidos=i.read(bff))!=-1)
-                        o.write(bff,0,bytesleidos);
+                            o.write(bff,0,bytesleidos);
                         acciones.info("Fichero guardado localmente.");
                         System.out.println("Fichero guardado localmente.");
                         o.close();
                         i.close();
                         cliente.close();
                     }
-                    else errores.warning("El comando introducido es invalido.");
+                    else errores.warning("El comando introducido no es invalido.");
                     entrada.close();
                 }catch(IOException e){
                     e.printStackTrace();

@@ -107,8 +107,9 @@ public class LFTServer {
     }
     public void modoSSL(int puerto) throws IOException, KeyStoreException, FileNotFoundException,NoSuchAlgorithmException,CertificateException,UnrecoverableKeyException{
         //modo ssl del servidor
-        String trustedStore="/home/oscar/java/jre1.8.0_371/lib/security/servertrustedstore.jks";
-        String serverKey="/home/oscar/java/jre1.8.0_371/lib/security/serverkey.jks";
+        String trustedStore="C:\\Program Files\\Java\\jre1.8.0_321\\bin\\servertrustedstore.jks";
+        String serverKey="C:\\Program Files\\Java\\jre1.8.0_321\\bin\\serverkey.jks";
+        
 
         //acedemos al almacen de claves serverkey
         KeyStore store= KeyStore.getInstance("JKS");
@@ -139,7 +140,7 @@ public class LFTServer {
             //mientras que no se supere el numero  maximo de clientes 
             while(nCLientes<=clientesMax){
                 SSLSocket socketC =(SSLSocket) socketSSL.accept();
-                //AQUI EL METODO SERVIR PARA GESTIONAR TODAS LAS ACCIONES DEL CLIENTE
+                sirve(socketC);
                 nCLientes++;
             }
         }catch(Exception e){
@@ -164,7 +165,7 @@ public class LFTServer {
 
                     if (SSL) {
                         SSLSession s = ((SSLSocket) cliente).getSession();
-                        System.out.println("Conectado cliente: " + s.getPeerHost() + ":" + s.getPeerPrincipal().toString());
+                        System.out.println("Conectado cliente: " + s.getPeerHost());
 
                     } else {
                         System.out.println("Cliente (con puerto en" + cliente.getPort() + ") conectado desde "+ cliente.getInetAddress() + " al puerto " + cliente.getLocalPort());
@@ -216,7 +217,7 @@ public class LFTServer {
                             if (tokens[0].equals("GET")) {
                             acciones.info("Recibido comando GET");
                                 try {
-                                    String ruta = serverDir + "//" + tokens[1];
+                                    String ruta = serverDir + "\\" + tokens[1];
                                     File archivo = new File(ruta);
 
                                     if (archivo.exists() && !archivo.isDirectory()) {
@@ -255,15 +256,15 @@ public class LFTServer {
                             else if (tokens[0].equals("PUT")) {
                             acciones.info("Recibido comando PUT");
                                 try {
-                                    String ruta = serverDir + "//" + tokens[1];
-                                    FileOutputStream fos = new FileOutputStream(ruta);
+                                    String ruta = serverDir+"\\"+tokens[1];
+                                    FileOutputStream o = new FileOutputStream(ruta);
 
                                     byte[] buffer = new byte[1024];
                                     int bytesRead;
                                     while ((bytesRead = cliente.getInputStream().read(buffer)) != -1) {
-                                        fos.write(buffer, 0, bytesRead);
+                                        o.write(buffer, 0, bytesRead);
                                     }
-                                    fos.close();
+                                    o.close();
                                     acciones.info("Archivo almacenado correctamente");
                                     cliente.close();
                                     nCLientes--;
